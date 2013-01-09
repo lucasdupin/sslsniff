@@ -66,7 +66,7 @@ int Destination::getOriginalDestination(boost::asio::ip::tcp::socket &socket,
 	struct pfioc_natlook nl;
 
 	if (fd < 0) {
-		fd = open("/dev/bpf", O_RDONLY);
+		fd = open("/dev/pf", O_RDONLY);
 		if (fd >= 0) {
 			fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
 		}
