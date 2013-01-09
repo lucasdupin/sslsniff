@@ -18,8 +18,8 @@
  */
 
 // XXX define one of these through autoconf
-//#define HAVE_PF 
-#define HAVE_NETFILTER 
+#define HAVE_PF 
+// #define HAVE_NETFILTER 
 
 #include <arpa/inet.h>
 
@@ -35,7 +35,9 @@
 #include <sys/fcntl.h>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <net/pfvar.h>
+// #include <net/pfvar.h>
+
+#include "pfvar.h"
 #endif
 
 
@@ -64,7 +66,7 @@ int Destination::getOriginalDestination(boost::asio::ip::tcp::socket &socket,
 	struct pfioc_natlook nl;
 
 	if (fd < 0) {
-		fd = open("/dev/pf", O_RDONLY);
+		fd = open("/dev/bpf", O_RDONLY);
 		if (fd >= 0) {
 			fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
 		}
@@ -75,9 +77,9 @@ int Destination::getOriginalDestination(boost::asio::ip::tcp::socket &socket,
 	}
 
 	memset(&nl, 0, sizeof(struct pfioc_natlook));
-	nl.saddr.v4.s_addr = htonl(re.address().to_v4().to_ulong());
+	nl.saddr.pfa.v4.s_addr = htonl(re.address().to_v4().to_ulong());
 	nl.sport = htons(re.port());
-	nl.daddr.v4.s_addr = htonl(le.address().to_v4().to_ulong());
+	nl.daddr.pfa.v4.s_addr = htonl(le.address().to_v4().to_ulong());
 	nl.dport = htons(le.port());
 	nl.af = AF_INET;
 	nl.proto = IPPROTO_TCP;
@@ -92,12 +94,12 @@ int Destination::getOriginalDestination(boost::asio::ip::tcp::socket &socket,
 		throw IndeterminateDestinationException();
 	}
 
-	if (nl.daddr.v4.s_addr == nl.rdaddr.v4.s_addr && nl.dport == nl.rdport) {
+	if (nl.daddr.pfa.v4.s_addr == nl.rdaddr.pfa.v4.s_addr && nl.dport == nl.rdport) {
 		/* no destination addr/port rewriting in place */
 		throw IndeterminateDestinationException();
 	}
 
-	originalDestination = boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4(ntohl(nl.rdaddr.v4.s_addr)), 
+	originalDestination = boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4(ntohl(nl.rdaddr.pfa.v4.s_addr)), 
 							     ntohs(nl.rdport));
 	return 1;
 #else
